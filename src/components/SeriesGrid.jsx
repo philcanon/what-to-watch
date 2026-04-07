@@ -1,6 +1,6 @@
 import SeriesCard from './SeriesCard'
 
-function SeriesGrid({ series }) {
+function SeriesGrid({ series, onSelect }) {
   return (
     <div
       style={{
@@ -11,7 +11,11 @@ function SeriesGrid({ series }) {
       }}
     >
       {series.map((item) => (
-        <SeriesCard key={item.id} item={item} />
+        <SeriesCard
+          key={item.id}
+          item={item}
+          onSelect={onSelect}
+        />
       ))}
     </div>
   )

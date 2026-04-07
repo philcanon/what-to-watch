@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { supabase } from './lib/supabase'
 import SeriesGrid from './components/SeriesGrid'
+import SeriesModal from './SeriesModal'
 
 function App() {
   const [series, setSeries] = useState([])
@@ -12,6 +13,22 @@ function App() {
   const [selectedYear, setSelectedYear] = useState('All')
   const [sortBy, setSortBy] = useState('review-newest')
   const [fiveStarOnly, setFiveStarOnly] = useState(false)
+  const [selectedSeries, setSelectedSeries] = useState(null)
+
+  useEffect(() => {
+    document.title = 'What to Watch - Guardian Top TV Picks'
+  }, [])
+
+  useEffect(() => {
+    function handleKeyDown(e) {
+      if (e.key === 'Escape') {
+        setSelectedSeries(null)
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [])
 
   useEffect(() => {
     async function fetchSeries() {
@@ -264,12 +281,20 @@ function App() {
       {error && <p>Error: {error}</p>}
 
       {!loading && !error && filteredSeries.length === 0 && (
-        <p>No Guardian 4★+ shows match your filters.</p>
+        <p>No Guardian 3★+ shows match your filters.</p>
       )}
 
       {!loading && !error && filteredSeries.length > 0 && (
-        <SeriesGrid series={filteredSeries} />
+        <SeriesGrid
+          series={filteredSeries}
+          onSelect={setSelectedSeries}
+        />
       )}
+
+      <SeriesModal
+        series={selectedSeries}
+        onClose={() => setSelectedSeries(null)}
+      />
     </main>
   )
 }

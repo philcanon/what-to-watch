@@ -14,12 +14,25 @@ function formatProviderName(name) {
   return map[name] || name
 }
 
-function SeriesCard({ item }) {
+function SeriesCard({ item, onSelect }) {
   const providers = (item.watch_providers_au?.flatrate || []).map(formatProviderName)
   const uniqueProviders = [...new Set(providers)]
 
+  function handleSelect() {
+    if (onSelect) onSelect(item)
+  }
+
   return (
     <article
+      onClick={handleSelect}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          handleSelect()
+        }
+      }}
+      role="button"
+      tabIndex={0}
       style={{
         border: '1px solid #ddd',
         borderRadius: '12px',
@@ -28,6 +41,7 @@ function SeriesCard({ item }) {
         display: 'flex',
         flexDirection: 'column',
         height: '100%',
+        cursor: 'pointer',
       }}
     >
       {item.poster_url && (
@@ -78,6 +92,7 @@ function SeriesCard({ item }) {
                   href={item.latest_guardian_url}
                   target="_blank"
                   rel="noreferrer"
+                  onClick={(e) => e.stopPropagation()}
                   style={{
                     color: '#005689',
                     textDecoration: 'none',

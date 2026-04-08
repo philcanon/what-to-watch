@@ -292,9 +292,26 @@ function App() {
       )}
 
       <SeriesModal
-        series={selectedSeries}
-        onClose={() => setSelectedSeries(null)}
-      />
+  series={selectedSeries}
+  onClose={() => setSelectedSeries(null)}
+  onRatingSaved={async () => {
+    const { data, error } = await supabase
+      .from('series')
+      .select('*')
+      .gte('guardian_avg_stars', 3)
+
+    if (!error) {
+      setSeries(data || [])
+
+      if (selectedSeries) {
+        const updated = (data || []).find((item) => item.id === selectedSeries.id)
+        if (updated) {
+          setSelectedSeries(updated)
+        }
+      }
+    }
+  }}
+/>
     </main>
   )
 }

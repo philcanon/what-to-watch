@@ -1,240 +1,186 @@
-import React from "react";
+import React, { useEffect, useState } from 'react'
+import { supabase } from './lib/supabase'
+
+const SESSION_KEY = 'wtw_session_id'
+
+function getOrCreateSessionId() {
+  let id = localStorage.getItem(SESSION_KEY)
+
+  if (!id) {
+    id =
+      typeof crypto !== 'undefined' && crypto.randomUUID
+        ? crypto.randomUUID()
+        : `${Date.now()}-${Math.random().toString(36).slice(2)}`
+    localStorage.setItem(SESSION_KEY, id)
+  }
+
+  return id
+}
 
 function starsFromAvg(value) {
-  if (value == null) return "—";
-  const num = Number(value);
-  if (Number.isNaN(num)) return "—";
-  return `${num.toFixed(1)}★`;
+  if (value == null) return '—'
+  const num = Number(value)
+  if (Number.isNaN(num)) return '—'
+  return `${num.toFixed(1)}★`
 }
 
 function providerNames(providers) {
-  if (!providers) return [];
+  if (!providers) return []
 
   if (Array.isArray(providers)) {
     return providers
       .map((p) => {
-        if (typeof p === "string") return p;
-        return p?.provider_name ?? p?.name ?? null;
+        if (typeof p === 'string') return p
+        return p?.provider_name ?? p?.name ?? null
       })
-      .filter(Boolean);
+      .filter(Boolean)
   }
 
-  return [];
+  if (providers?.flatrate && Array.isArray(providers.flatrate)) {
+    return providers.flatrate
+      .map((p) => {
+        if (typeof p === 'string') return p
+        return p?.provider_name ?? p?.name ?? null
+      })
+      .filter(Boolean)
+  }
+
+  return []
 }
 
-export default function SeriesModal({ series, onClose }) {
-  if (!series) return null;
+export default function SeriesModal({ series, onClose, onRatingSaved }) {
+  const [rating, setRating] = useState(0)
+  const [reviewText, setReviewText] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [message, setMessage] = useState('')
 
-  const providers = providerNames(series.watch_providers_au);
+  useEffect(() => {
+    setRating(0)
+    setReviewText('')
+    setMessage('')
+  }, [series?.id])
+
+  if (!series) return null
+
+  const providers = providerNames(series.watch_providers_au)
+
+  async function saveRating() {
+    if (!rating || !series?.id) return
+
+    setSaving(true)
+    setMessage('')
+
+    const sessionId = getOrCreateSessionId()
+
+    const { error } = await supabase
+      .from('user_ratings')
+      .upsert(
+        {
+          series_id: series.id,
+          session_id: sessionId,
+          rating,
+          review_text: reviewText.trim() || null,
+          updated_at: new Date().toISOString(),
+        },
+        {
+          onConflict: 'series_id,session_id',
+        }
+      )
+
+    if (error) {
+      console.error('Rating save error:', error)
+      setMessage(`Could not save rating: ${error.message}`)
+      setSaving(false)
+      return
+    }
+
+    setMessage('Your rating has been saved.')
+
+    if (onRatingSaved) {
+      await onRatingSaved()
+    }
+
+    setSaving(false)
+  }
 
   return (
     <div
-      className="modal-backdrop"
       onClick={onClose}
       style={{
-        position: "fixed",
+        position: 'fixed',
         inset: 0,
-        background: "rgba(0,0,0,0.65)",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        padding: "24px",
+        background: 'rgba(0,0,0,0.65)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '24px',
         zIndex: 1000,
       }}
     >
       <div
-        className="modal-card"
         onClick={(e) => e.stopPropagation()}
         style={{
-          background: "#111",
-          color: "#fff",
-          width: "min(900px, 100%)",
-          maxHeight: "90vh",
-          overflowY: "auto",
-          borderRadius: "16px",
-          padding: "24px",
-          boxShadow: "0 20px 60px rgba(0,0,0,0.4)",
+          background: '#111',
+          color: '#fff',
+          width: 'min(900px, 100%)',
+          maxHeight: '90vh',
+          overflowY: 'auto',
+          borderRadius: '16px',
+          padding: '24px',
         }}
       >
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            gap: "16px",
-            alignItems: "flex-start",
-            marginBottom: "20px",
-          }}
-        >
-          <div>
-            <h2 style={{ margin: 0 }}>{series.name}</h2>
-            <div style={{ opacity: 0.8, marginTop: "6px" }}>
-              {series.first_air_year ?? "—"}
-              {series.country ? ` • ${series.country}` : ""}
-            </div>
-          </div>
-
-          <button
-            onClick={onClose}
-            style={{
-              background: "transparent",
-              color: "#fff",
-              border: "1px solid rgba(255,255,255,0.3)",
-              borderRadius: "10px",
-              padding: "8px 12px",
-              cursor: "pointer",
-            }}
-          >
-            Close
-          </button>
+        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+          <h2>{series.name}</h2>
+          <button onClick={onClose}>Close</button>
         </div>
 
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "220px 1fr",
-            gap: "24px",
-          }}
-        >
-          <div>
-            {series.poster_url || series.poster_image ? (
-              <img
-                src={series.poster_url || series.poster_image}
-                alt={series.name}
-                style={{
-                  width: "100%",
-                  borderRadius: "12px",
-                  display: "block",
-                }}
-              />
-            ) : (
-              <div
-                style={{
-                  width: "100%",
-                  aspectRatio: "2 / 3",
-                  background: "#222",
-                  borderRadius: "12px",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  color: "#aaa",
-                }}
-              >
-                No image
-              </div>
-            )}
-          </div>
+        <p>
+          <strong>Guardian:</strong> {starsFromAvg(series.guardian_avg_stars)}
+        </p>
 
-          <div>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: "10px", 
-marginBottom: "16px" }}>
-              <span
-                style={{
-                  background: "#1f1f1f",
-                  padding: "8px 12px",
-                  borderRadius: "999px",
-                }}
-              >
-                Guardian: {starsFromAvg(series.guardian_avg_stars)}
-              </span>
+        <p>
+          <strong>User rating:</strong>{' '}
+          {series.user_avg_rating
+            ? `${Number(series.user_avg_rating).toFixed(1)}★ (${series.user_rating_count || 0})`
+            : 'Not yet rated'}
+        </p>
 
-              <span
-                style={{
-                  background: "#1f1f1f",
-                  padding: "8px 12px",
-                  borderRadius: "999px",
-                }}
-              >
-                User rating:{" "}
-                {series.user_avg_rating != null
-                  ? `${Number(series.user_avg_rating).toFixed(1)}★ 
-(${series.user_rating_count ?? 0})`
-                  : "Not yet rated"}
-              </span>
-            </div>
+        <p>{series.overview}</p>
 
-            {series.genres ? (
-              <p style={{ marginTop: 0, opacity: 0.9 }}>
-                <strong>Genres:</strong> {series.genres}
-              </p>
-            ) : null}
+        <h3>Rate this show</h3>
 
-            {series.latest_review_date ? (
-              <p style={{ opacity: 0.9 }}>
-                <strong>Latest Guardian review:</strong> 
-{series.latest_review_date}
-              </p>
-            ) : null}
-
-            {series.overview ? (
-              <>
-                <h3 style={{ marginBottom: "8px" }}>Overview</h3>
-                <p style={{ lineHeight: 1.6, opacity: 0.95 
-}}>{series.overview}</p>
-              </>
-            ) : null}
-
-            {providers.length > 0 ? (
-              <>
-                <h3 style={{ marginBottom: "8px" }}>Available on</h3>
-                <p style={{ lineHeight: 1.6, opacity: 0.95 
-}}>{providers.join(", ")}</p>
-              </>
-            ) : null}
-
-            <div style={{ display: "flex", flexWrap: "wrap", gap: "12px", 
-marginTop: "20px" }}>
-              {series.latest_guardian_url ? (
-                <a
-                  href={series.latest_guardian_url}
-                  target="_blank"
-                  rel="noreferrer"
-                  style={{
-                    background: "#fff",
-                    color: "#111",
-                    textDecoration: "none",
-                    padding: "10px 14px",
-                    borderRadius: "10px",
-                    fontWeight: 600,
-                  }}
-                >
-                  Read Guardian review
-                </a>
-              ) : null}
-
-              {series.justwatch_au_link ? (
-                <a
-                  href={series.justwatch_au_link}
-                  target="_blank"
-                  rel="noreferrer"
-                  style={{
-                    background: "transparent",
-                    color: "#fff",
-                    border: "1px solid rgba(255,255,255,0.3)",
-                    textDecoration: "none",
-                    padding: "10px 14px",
-                    borderRadius: "10px",
-                  }}
-                >
-                  View streaming options
-                </a>
-              ) : null}
-            </div>
-
-            <div
+        <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
+          {[1, 2, 3, 4, 5].map((star) => (
+            <button
+              key={star}
+              onClick={() => setRating(star)}
               style={{
-                marginTop: "28px",
-                paddingTop: "20px",
-                borderTop: "1px solid rgba(255,255,255,0.12)",
+                fontSize: '1.8rem',
+                background: 'transparent',
+                border: 'none',
+                cursor: 'pointer',
+                color: star <= rating ? '#ffd166' : '#666',
               }}
             >
-              <h3 style={{ marginBottom: "8px" }}>User reviews</h3>
-              <p style={{ opacity: 0.8, marginBottom: 0 }}>
-                Coming next: star rating and short user review submission.
-              </p>
-            </div>
-          </div>
+              ★
+            </button>
+          ))}
         </div>
+
+        <textarea
+          value={reviewText}
+          onChange={(e) => setReviewText(e.target.value)}
+          placeholder="Optional note..."
+          rows={4}
+          style={{ width: '100%', marginBottom: '10px' }}
+        />
+
+        <button onClick={saveRating} disabled={!rating || saving}>
+          {saving ? 'Saving...' : 'Save my rating'}
+        </button>
+
+        {message && <p>{message}</p>}
       </div>
     </div>
-  );
+  )
 }

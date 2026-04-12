@@ -31,7 +31,19 @@ function starsFromAvg(value) {
   return `${num.toFixed(1)}★`
 }
 
-export default function SeriesGrid({ series, onSelect, compact = false }) {
+function userRatingText(avg, count) {
+  if (avg == null || Number(count || 0) === 0) {
+    return 'Not yet rated'
+  }
+
+  return `${Number(avg).toFixed(1)}★ (${count || 0})`
+}
+
+export default function SeriesGrid({
+  series,
+  onSelect,
+  compact = false,
+}) {
   if (!series || series.length === 0) return null
 
   return (
@@ -91,7 +103,7 @@ export default function SeriesGrid({ series, onSelect, compact = false }) {
               <h3
                 style={{
                   margin: '0 0 6px 0',
-                  fontSize: compact ? '0.9rem' : '0.95rem',
+                  fontSize: compact ? '1rem' : '1.05rem',
                   lineHeight: 1.25,
                   color: '#24384d',
                 }}
@@ -119,6 +131,17 @@ export default function SeriesGrid({ series, onSelect, compact = false }) {
                     }}
                   >
                     <strong>Guardian:</strong> {starsFromAvg(item.guardian_avg_stars)}
+                  </p>
+
+                  <p
+                    style={{
+                      margin: '0 0 6px 0',
+                      fontSize: '0.82rem',
+                      color: '#444',
+                    }}
+                  >
+                    <strong>Users:</strong>{' '}
+                    {userRatingText(item.user_avg_rating, item.user_rating_count)}
                   </p>
 
                   <p

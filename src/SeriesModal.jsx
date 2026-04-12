@@ -52,12 +52,56 @@ export default function SeriesModal({ series, onClose, onRatingSaved }) {
   const [rating, setRating] = useState(0)
   const [reviewText, setReviewText] = useState('')
   const [saving, setSaving] = useState(false)
+  const [loadingExistingRating, setLoadingExistingRating] = useState(false)
   const [message, setMessage] = useState('')
-
+const [hasExistingRating, setHasExistingRating] = useState(false)
   useEffect(() => {
-    setRating(0)
-    setReviewText('')
-    setMessage('')
+    let cancelled = false
+
+    async function loadExistingRating() {
+      if (!series?.id) return
+
+      setRating(0)
+      setReviewText('')
+      setMessage('')
+      setLoadingExistingRating(true)
+
+      const sessionId = getOrCreateSessionId()
+
+      const { data, error } = await supabase
+        .from('user_ratings')
+        .select('rating, review_text')
+        .eq('series_id', series.id)
+        .eq('session_id', sessionId)
+        .maybeSingle()
+
+      if (cancelled) return
+
+      if (error) {
+        console.error('Existing rating load error:', error)
+        setMessage(`Could not load your previous rating: ${error.message}`)
+        setLoadingExistingRating(false)
+        return
+      }
+
+      if (data) {
+  setRating(data.rating ?? 0)
+  setReviewText(data.review_text ?? '')
+  setHasExistingRating(true)
+} else {
+  setRating(0)
+  setReviewText('')
+  setHasExistingRating(false)
+}
+
+      setLoadingExistingRating(false)
+    }
+
+    loadExistingRating()
+
+    return () => {
+      cancelled = true
+    }
   }, [series?.id])
 
   if (!series) return null
@@ -94,7 +138,8 @@ export default function SeriesModal({ series, onClose, onRatingSaved }) {
       return
     }
 
-    setMessage('Your rating has been saved.')
+    setMessage(hasExistingRating ? 'Your rating has been updated.' : 'Your rating has been saved.')
+setHasExistingRating(true)
 
     if (onRatingSaved) {
       await onRatingSaved()
@@ -145,21 +190,35 @@ export default function SeriesModal({ series, onClose, onRatingSaved }) {
             : 'Not yet rated'}
         </p>
 
+        {providers.length > 0 && (
+          <p>
+            <strong>Watch on:</strong> {providers.join(', ')}
+          </p>
+        )}
+
         <p>{series.overview}</p>
 
         <h3>Rate this show</h3>
 
+        {loadingExistingRating && <p>Loading your previous rating...</p>}
+{hasExistingRating && (
+  <p style={{ color: '#ffd166', marginBottom: '8px' }}>
+    Your previous rating: {rating}★
+  </p>
+)}
         <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
           {[1, 2, 3, 4, 5].map((star) => (
             <button
               key={star}
               onClick={() => setRating(star)}
+              disabled={loadingExistingRating || saving}
               style={{
                 fontSize: '1.8rem',
                 background: 'transparent',
                 border: 'none',
-                cursor: 'pointer',
+                cursor: loadingExistingRating || saving ? 'default' : 'pointer',
                 color: star <= rating ? '#ffd166' : '#666',
+                opacity: loadingExistingRating || saving ? 0.7 : 1,
               }}
             >
               ★
@@ -172,10 +231,14 @@ export default function SeriesModal({ series, onClose, onRatingSaved }) {
           onChange={(e) => setReviewText(e.target.value)}
           placeholder="Optional note..."
           rows={4}
+          disabled={loadingExistingRating || saving}
           style={{ width: '100%', marginBottom: '10px' }}
         />
 
-        <button onClick={saveRating} disabled={!rating || saving}>
+        <button
+          onClick={saveRating}
+          disabled={!rating || saving || loadingExistingRating}
+        >
           {saving ? 'Saving...' : 'Save my rating'}
         </button>
 

@@ -239,8 +239,23 @@ function App() {
   ])
 
   return (
-    <main style={{ padding: '2rem', fontFamily: 'Arial, sans-serif' }}>
-      <h1>What to Watch: Guardian Top TV Picks</h1>
+    <main
+      style={{
+        padding: '1rem',
+        fontFamily: 'Arial, sans-serif',
+        maxWidth: '1600px',
+        margin: '0 auto',
+      }}
+    >
+      <h1
+        style={{
+          fontSize: 'clamp(1.8rem, 5vw, 3.2rem)',
+          marginBottom: '0.5rem',
+        }}
+      >
+        What to Watch: Guardian Top TV Picks
+      </h1>
+
       <p style={{ marginTop: 0, color: '#555' }}>
         {filteredSeries.length} Guardian-rated shows currently match your filters.
       </p>
@@ -273,11 +288,11 @@ function App() {
 
       <div
         style={{
-          display: 'flex',
-          gap: '1rem',
-          flexWrap: 'wrap',
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
+          gap: '0.75rem',
           marginBottom: '1rem',
-          alignItems: 'center',
+          alignItems: 'stretch',
         }}
       >
         <input
@@ -286,11 +301,12 @@ function App() {
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           style={{
-            padding: '0.5rem',
+            padding: '0.75rem',
             width: '100%',
-            maxWidth: '320px',
+            minWidth: 0,
             borderRadius: '6px',
             border: '1px solid #ccc',
+            boxSizing: 'border-box',
           }}
         />
 
@@ -298,11 +314,12 @@ function App() {
           value={selectedGenre}
           onChange={(e) => setSelectedGenre(e.target.value)}
           style={{
-            padding: '0.5rem',
+            padding: '0.75rem',
             width: '100%',
-            maxWidth: '200px',
+            minWidth: 0,
             borderRadius: '6px',
             border: '1px solid #ccc',
+            boxSizing: 'border-box',
           }}
         >
           {genreOptions.map((genre) => (
@@ -316,11 +333,12 @@ function App() {
           value={selectedProvider}
           onChange={(e) => setSelectedProvider(e.target.value)}
           style={{
-            padding: '0.5rem',
+            padding: '0.75rem',
             width: '100%',
-            maxWidth: '240px',
+            minWidth: 0,
             borderRadius: '6px',
             border: '1px solid #ccc',
+            boxSizing: 'border-box',
           }}
         >
           {providerOptions.map((provider) => (
@@ -334,11 +352,12 @@ function App() {
           value={selectedYear}
           onChange={(e) => setSelectedYear(e.target.value)}
           style={{
-            padding: '0.5rem',
+            padding: '0.75rem',
             width: '100%',
-            maxWidth: '160px',
+            minWidth: 0,
             borderRadius: '6px',
             border: '1px solid #ccc',
+            boxSizing: 'border-box',
           }}
         >
           {yearOptions.map((year) => (
@@ -352,11 +371,12 @@ function App() {
           value={sortBy}
           onChange={(e) => setSortBy(e.target.value)}
           style={{
-            padding: '0.5rem',
+            padding: '0.75rem',
             width: '100%',
-            maxWidth: '220px',
+            minWidth: 0,
             borderRadius: '6px',
             border: '1px solid #ccc',
+            boxSizing: 'border-box',
           }}
         >
           <option value="review-newest">Newest review</option>
@@ -370,11 +390,12 @@ function App() {
           value={ratingFilter}
           onChange={(e) => setRatingFilter(e.target.value)}
           style={{
-            padding: '0.5rem',
+            padding: '0.75rem',
             width: '100%',
-            maxWidth: '180px',
+            minWidth: 0,
             borderRadius: '6px',
             border: '1px solid #ccc',
+            boxSizing: 'border-box',
           }}
         >
           <option value="all">All ratings</option>

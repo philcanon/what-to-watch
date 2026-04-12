@@ -54,7 +54,8 @@ export default function SeriesModal({ series, onClose, onRatingSaved }) {
   const [saving, setSaving] = useState(false)
   const [loadingExistingRating, setLoadingExistingRating] = useState(false)
   const [message, setMessage] = useState('')
-const [hasExistingRating, setHasExistingRating] = useState(false)
+  const [hasExistingRating, setHasExistingRating] = useState(false)
+
   useEffect(() => {
     let cancelled = false
 
@@ -64,6 +65,7 @@ const [hasExistingRating, setHasExistingRating] = useState(false)
       setRating(0)
       setReviewText('')
       setMessage('')
+      setHasExistingRating(false)
       setLoadingExistingRating(true)
 
       const sessionId = getOrCreateSessionId()
@@ -85,14 +87,14 @@ const [hasExistingRating, setHasExistingRating] = useState(false)
       }
 
       if (data) {
-  setRating(data.rating ?? 0)
-  setReviewText(data.review_text ?? '')
-  setHasExistingRating(true)
-} else {
-  setRating(0)
-  setReviewText('')
-  setHasExistingRating(false)
-}
+        setRating(data.rating ?? 0)
+        setReviewText(data.review_text ?? '')
+        setHasExistingRating(true)
+      } else {
+        setRating(0)
+        setReviewText('')
+        setHasExistingRating(false)
+      }
 
       setLoadingExistingRating(false)
     }
@@ -139,7 +141,7 @@ const [hasExistingRating, setHasExistingRating] = useState(false)
     }
 
     setMessage(hasExistingRating ? 'Your rating has been updated.' : 'Your rating has been saved.')
-setHasExistingRating(true)
+    setHasExistingRating(true)
 
     if (onRatingSaved) {
       await onRatingSaved()
@@ -158,7 +160,7 @@ setHasExistingRating(true)
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: '24px',
+        padding: '12px',
         zIndex: 1000,
       }}
     >
@@ -168,15 +170,44 @@ setHasExistingRating(true)
           background: '#111',
           color: '#fff',
           width: 'min(900px, 100%)',
-          maxHeight: '90vh',
+          maxHeight: '92vh',
           overflowY: 'auto',
           borderRadius: '16px',
-          padding: '24px',
+          padding: '16px',
+          boxSizing: 'border-box',
         }}
       >
-        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-          <h2>{series.name}</h2>
-          <button onClick={onClose}>Close</button>
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'flex-start',
+            gap: '1rem',
+            flexWrap: 'wrap',
+            marginBottom: '1rem',
+          }}
+        >
+          <h2
+            style={{
+              margin: 0,
+              fontSize: 'clamp(1.4rem, 4vw, 2rem)',
+              lineHeight: 1.2,
+            }}
+          >
+            {series.name}
+          </h2>
+
+          <button
+            onClick={onClose}
+            style={{
+              padding: '0.75rem 1rem',
+              borderRadius: '8px',
+              border: 'none',
+              cursor: 'pointer',
+            }}
+          >
+            Close
+          </button>
         </div>
 
         <p>
@@ -196,17 +227,26 @@ setHasExistingRating(true)
           </p>
         )}
 
-        <p>{series.overview}</p>
+        <p style={{ lineHeight: 1.5 }}>{series.overview}</p>
 
         <h3>Rate this show</h3>
 
         {loadingExistingRating && <p>Loading your previous rating...</p>}
-{hasExistingRating && (
-  <p style={{ color: '#ffd166', marginBottom: '8px' }}>
-    Your previous rating: {rating}★
-  </p>
-)}
-        <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
+
+        {hasExistingRating && (
+          <p style={{ color: '#ffd166', marginBottom: '8px' }}>
+            Your previous rating: {rating}★
+          </p>
+        )}
+
+        <div
+          style={{
+            display: 'flex',
+            gap: '8px',
+            marginBottom: '12px',
+            flexWrap: 'wrap',
+          }}
+        >
           {[1, 2, 3, 4, 5].map((star) => (
             <button
               key={star}
@@ -219,6 +259,7 @@ setHasExistingRating(true)
                 cursor: loadingExistingRating || saving ? 'default' : 'pointer',
                 color: star <= rating ? '#ffd166' : '#666',
                 opacity: loadingExistingRating || saving ? 0.7 : 1,
+                padding: 0,
               }}
             >
               ★
@@ -232,12 +273,24 @@ setHasExistingRating(true)
           placeholder="Optional note..."
           rows={4}
           disabled={loadingExistingRating || saving}
-          style={{ width: '100%', marginBottom: '10px' }}
+          style={{
+            width: '100%',
+            marginBottom: '10px',
+            boxSizing: 'border-box',
+            padding: '0.75rem',
+            borderRadius: '8px',
+          }}
         />
 
         <button
           onClick={saveRating}
           disabled={!rating || saving || loadingExistingRating}
+          style={{
+            padding: '0.75rem 1rem',
+            borderRadius: '8px',
+            border: 'none',
+            cursor: !rating || saving || loadingExistingRating ? 'default' : 'pointer',
+          }}
         >
           {saving ? 'Saving...' : 'Save my rating'}
         </button>

@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 
 function providerNames(providers) {
   if (!providers) return []
@@ -39,21 +39,43 @@ function userRatingText(avg, count) {
   return `${Number(avg).toFixed(1)}★ (${count || 0})`
 }
 
-export default function SeriesGrid({
-  series,
-  onSelect,
-  compact = false,
-}) {
+function getColumnCount(width, compact) {
+  if (compact) {
+    if (width < 480) return 2
+    if (width < 900) return 3
+    return 4
+  }
+
+  if (width < 600) return 2
+  if (width < 900) return 3
+  if (width < 1200) return 4
+  return 5
+}
+
+export default function SeriesGrid({ series, onSelect, compact = false }) {
+  const [windowWidth, setWindowWidth] = useState(
+    typeof window !== 'undefined' ? window.innerWidth : 1400
+  )
+
+  useEffect(() => {
+    function handleResize() {
+      setWindowWidth(window.innerWidth)
+    }
+
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
+
   if (!series || series.length === 0) return null
+
+  const columns = getColumnCount(windowWidth, compact)
 
   return (
     <div
       style={{
         display: 'grid',
         gap: compact ? '0.75rem' : '1rem',
-        gridTemplateColumns: compact
-          ? 'repeat(auto-fill, minmax(140px, 1fr))'
-          : 'repeat(5, minmax(0, 1fr))',
+        gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))`,
       }}
     >
       {series.map((item) => {
@@ -170,6 +192,7 @@ export default function SeriesGrid({
                         style={{
                           color: '#1a73e8',
                           textDecoration: 'none',
+                          wordBreak: 'break-word',
                         }}
                       >
                         Read Guardian review

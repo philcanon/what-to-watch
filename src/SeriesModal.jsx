@@ -109,6 +109,11 @@ export default function SeriesModal({ series, onClose, onRatingSaved }) {
   if (!series) return null
 
   const providers = providerNames(series.watch_providers_au)
+  const hasGuardianRating = series.guardian_avg_stars != null
+  const hasUserRating =
+    series.user_avg_rating != null && Number(series.user_rating_count || 0) > 0
+  const hasWatchInfo = providers.length > 0
+  const isMustSee = series.is_must_see === true
 
   async function saveRating() {
     if (!rating || !series?.id) return
@@ -197,6 +202,24 @@ export default function SeriesModal({ series, onClose, onRatingSaved }) {
             }}
           >
             <div style={{ flex: '1 1 320px' }}>
+              {isMustSee && (
+                <div
+                  style={{
+                    display: 'inline-block',
+                    marginBottom: '10px',
+                    background: '#111827',
+                    color: '#fff',
+                    fontSize: '0.72rem',
+                    fontWeight: 700,
+                    padding: '6px 10px',
+                    borderRadius: '999px',
+                    letterSpacing: '0.01em',
+                  }}
+                >
+                  Must See
+                </div>
+              )}
+
               <h2
                 style={{
                   margin: 0,
@@ -236,110 +259,116 @@ export default function SeriesModal({ series, onClose, onRatingSaved }) {
             </button>
           </div>
 
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
-              gap: '0.75rem',
-              marginBottom: '1rem',
-            }}
-          >
+          {(hasGuardianRating || hasUserRating || hasWatchInfo) && (
             <div
               style={{
-                background: '#f8fafc',
-                border: '1px solid #e5e7eb',
-                borderRadius: '14px',
-                padding: '12px 14px',
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+                gap: '0.75rem',
+                marginBottom: '1rem',
               }}
             >
-              <div
-                style={{
-                  fontSize: '0.76rem',
-                  fontWeight: 700,
-                  letterSpacing: '0.03em',
-                  textTransform: 'uppercase',
-                  color: '#6b7280',
-                  marginBottom: '4px',
-                }}
-              >
-                Guardian
-              </div>
-              <div
-                style={{
-                  fontSize: '1rem',
-                  fontWeight: 700,
-                  color: '#111827',
-                }}
-              >
-                {starsFromAvg(series.guardian_avg_stars)}
-              </div>
-            </div>
+              {hasGuardianRating && (
+                <div
+                  style={{
+                    background: '#f8fafc',
+                    border: '1px solid #e5e7eb',
+                    borderRadius: '14px',
+                    padding: '12px 14px',
+                  }}
+                >
+                  <div
+                    style={{
+                      fontSize: '0.76rem',
+                      fontWeight: 700,
+                      letterSpacing: '0.03em',
+                      textTransform: 'uppercase',
+                      color: '#6b7280',
+                      marginBottom: '4px',
+                    }}
+                  >
+                    Guardian
+                  </div>
+                  <div
+                    style={{
+                      fontSize: '1rem',
+                      fontWeight: 700,
+                      color: '#111827',
+                    }}
+                  >
+                    {starsFromAvg(series.guardian_avg_stars)}
+                  </div>
+                </div>
+              )}
 
-            <div
-              style={{
-                background: '#f8fafc',
-                border: '1px solid #e5e7eb',
-                borderRadius: '14px',
-                padding: '12px 14px',
-              }}
-            >
-              <div
-                style={{
-                  fontSize: '0.76rem',
-                  fontWeight: 700,
-                  letterSpacing: '0.03em',
-                  textTransform: 'uppercase',
-                  color: '#6b7280',
-                  marginBottom: '4px',
-                }}
-              >
-                Users
-              </div>
-              <div
-                style={{
-                  fontSize: '1rem',
-                  fontWeight: 700,
-                  color: '#111827',
-                }}
-              >
-                {series.user_avg_rating
-                  ? `${Number(series.user_avg_rating).toFixed(1)}★ (${series.user_rating_count || 0})`
-                  : 'Not yet rated'}
-              </div>
-            </div>
+              {hasUserRating && (
+                <div
+                  style={{
+                    background: '#f8fafc',
+                    border: '1px solid #e5e7eb',
+                    borderRadius: '14px',
+                    padding: '12px 14px',
+                  }}
+                >
+                  <div
+                    style={{
+                      fontSize: '0.76rem',
+                      fontWeight: 700,
+                      letterSpacing: '0.03em',
+                      textTransform: 'uppercase',
+                      color: '#6b7280',
+                      marginBottom: '4px',
+                    }}
+                  >
+                    Users
+                  </div>
+                  <div
+                    style={{
+                      fontSize: '1rem',
+                      fontWeight: 700,
+                      color: '#111827',
+                    }}
+                  >
+                    {`${Number(series.user_avg_rating).toFixed(1)}★ (${series.user_rating_count || 0})`}
+                  </div>
+                </div>
+              )}
 
-            <div
-              style={{
-                background: '#f8fafc',
-                border: '1px solid #e5e7eb',
-                borderRadius: '14px',
-                padding: '12px 14px',
-              }}
-            >
-              <div
-                style={{
-                  fontSize: '0.76rem',
-                  fontWeight: 700,
-                  letterSpacing: '0.03em',
-                  textTransform: 'uppercase',
-                  color: '#6b7280',
-                  marginBottom: '4px',
-                }}
-              >
-                Watch
-              </div>
-              <div
-                style={{
-                  fontSize: '0.95rem',
-                  fontWeight: 600,
-                  color: '#111827',
-                  lineHeight: 1.4,
-                }}
-              >
-                {providers.length > 0 ? providers.join(', ') : 'Not listed'}
-              </div>
+              {hasWatchInfo && (
+                <div
+                  style={{
+                    background: '#f8fafc',
+                    border: '1px solid #e5e7eb',
+                    borderRadius: '14px',
+                    padding: '12px 14px',
+                  }}
+                >
+                  <div
+                    style={{
+                      fontSize: '0.76rem',
+                      fontWeight: 700,
+                      letterSpacing: '0.03em',
+                      textTransform: 'uppercase',
+                      color: '#6b7280',
+                      marginBottom: '4px',
+                    }}
+                  >
+                    Watch
+                  </div>
+                  <div
+                    style={{
+                      fontSize: '0.95rem',
+                      fontWeight: 600,
+                      color: '#111827',
+                      lineHeight: 1.4,
+                    }}
+                  >
+                    {providers.join(', ')}
+                  </div>
+                </div>
+              )}
             </div>
-          </div>
+          )}
 
           <div
             style={{

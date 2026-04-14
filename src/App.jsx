@@ -1,5 +1,6 @@
 import { Routes, Route, Link, useLocation } from 'react-router-dom'
 import Browse from './pages/Browse'
+import MustSee from './pages/MustSee'
 import Favorites from './pages/Favorites'
 import MyRatings from './pages/MyRatings'
 
@@ -25,7 +26,6 @@ export default function App() {
 
   return (
     <main style={{ fontFamily: 'Arial, sans-serif' }}>
-      {/* HEADER */}
       <nav
         style={{
           display: 'flex',
@@ -38,7 +38,6 @@ export default function App() {
           flexWrap: 'wrap',
         }}
       >
-        {/* Title + Subtitle */}
         <div>
           <div
             style={{
@@ -64,7 +63,6 @@ export default function App() {
           </div>
         </div>
 
-        {/* Navigation */}
         <div
           style={{
             display: 'flex',
@@ -74,6 +72,10 @@ export default function App() {
         >
           <Link to="/" style={navLinkStyle('/')}>
             Browse
+          </Link>
+
+          <Link to="/must-see" style={navLinkStyle('/must-see')}>
+            Must See
           </Link>
 
           <Link to="/favorites" style={navLinkStyle('/favorites')}>
@@ -86,9 +88,9 @@ export default function App() {
         </div>
       </nav>
 
-      {/* ROUTES */}
       <Routes>
         <Route path="/" element={<Browse />} />
+        <Route path="/must-see" element={<MustSee />} />
         <Route path="/favorites" element={<Favorites />} />
         <Route path="/my-ratings" element={<MyRatings />} />
       </Routes>

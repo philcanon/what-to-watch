@@ -12,29 +12,74 @@ type TMDbTV = {
   genre_ids?: number[];
 };
 
-function cleanSeriesTitle(raw: string): string {
-  if (!raw) return "";
-  let s = raw.trim();
+type TMDbMovie = {
+  id: number;
+  title?: string;
+  original_title?: string;
+  release_date?: string;
+  overview?: string;
+  poster_path?: string | null;
+  genre_ids?: number[];
+};
 
-  // Common Guardian patterns: "X review – ..." / "X review - ..." / "X: review – ..."
-  const lowered = s.toLowerCase();
-  const cutMarkers = [" review –", " review -", " – review", ": review", " review:"];
-  for (const m of cutMarkers) {
-    const idx = lowered.indexOf(m);
-    if (idx !== -1) {
-      s = s.slice(0, idx).trim();
-      break;
+function cleanTitle(raw: string): string {
+  if (!raw) return "";
+
+  let title = raw.trim();
+
+  // Remove common Guardian review suffixes
+  title = title.replace(/\s+first look review\s*[–-].*$/i, "");
+  title = title.replace(/\s+final season review\s*[–-].*$/i, "");
+  title = title.replace(/\s+celebrity special review\s*[–-].*$/i, "");
+  title = title.replace(/\s+special review\s*[–-].*$/i, "");
+  title = title.replace(/\s+finale review\s*[–-].*$/i, "");
+  title = title.replace(/\s+final review\s*[–-].*$/i, "");
+  title = title.replace(/\s+review\s*[–-].*$/i, "");
+
+  // If headline still contains "review", strip everything after it
+  title = title.replace(/\s+review\b.*$/i, "");
+
+  // Remove trailing punctuation / spaces
+  title = title.replace(/[“”"'’:\-–—\s]+$/g, "").trim();
+
+  return title;
+}
+
+function buildCandidates(cleanedTitle: string): string[] {
+  const candidates: string[] = [];
+
+  function addCandidate(value: string) {
+    const v = value.trim();
+    if (v && !candidates.includes(v)) {
+      candidates.push(v);
     }
   }
 
-  // Remove trailing punctuation/whitespace
-  s = s.replace(/\s+/g, " ").replace(/[–—:-]\s*$/g, "").trim();
+  addCandidate(cleanedTitle);
 
-  // A few light normalisations
-  s = s.replace(/\s+series\s+\d+$/i, "").trim(); // e.g. "Foo series 2"
-  s = s.replace(/\s+season\s+\d+$/i, "").trim(); // e.g. "Foo season five"
+  // Colon fallback
+  if (cleanedTitle.includes(":")) {
+    addCandidate(cleanedTitle.split(":")[0]);
+  }
 
-  return s;
+  // Remove leading "The"
+  const noThe = cleanedTitle.replace(/^the\s+/i, "").trim();
+  if (noThe && noThe !== cleanedTitle) {
+    addCandidate(noThe);
+  }
+
+  // Remove common suffixes that may refer to episodes/specials rather than base series
+  addCandidate(
+    cleanedTitle
+      .replace(/\bfinale\b/i, "")
+      .replace(/\bfinal season\b/i, "")
+      .replace(/\bfinal\b/i, "")
+      .replace(/\bcelebrity special\b/i, "")
+      .replace(/\bspecial\b/i, "")
+      .trim()
+  );
+
+  return candidates.filter(Boolean);
 }
 
 async function tmdbFetch(path: string, tmdbKey: string): Promise<any> {
@@ -58,6 +103,19 @@ async function tmdbSearchTV(query: string, tmdbKey: string): Promise<TMDbTV | nu
 
   const json = await res.json();
   const results: TMDbTV[] = json?.results ?? [];
+  return results.length ? results[0] : null;
+}
+
+async function tmdbSearchMovie(query: string, tmdbKey: string): Promise<TMDbMovie | null> {
+  const url = new URL("https://api.themoviedb.org/3/search/movie");
+  url.searchParams.set("api_key", tmdbKey);
+  url.searchParams.set("query", query);
+
+  const res = await fetch(url.toString());
+  if (!res.ok) return null;
+
+  const json = await res.json();
+  const results: TMDbMovie[] = json?.results ?? [];
   return results.length ? results[0] : null;
 }
 
@@ -91,16 +149,23 @@ serve(async (req) => {
       auth: { persistSession: false },
     });
 
-    // Body options
     const body = await req.json().catch(() => ({}));
-    const limit = typeof body?.limit === "number" && body.limit > 0 ? body.limit : 50;
+    const limit = typeof body?.limit === "number" && body.limit > 0 ? body.limit : 100;
 
-    // Load TMDb genre map once
-    const genreJson = await tmdbFetch("/genre/tv/list", TMDB_API_KEY);
-    const genreMap = new Map<number, string>();
-    for (const g of (genreJson?.genres ?? [])) genreMap.set(g.id, g.name);
+    // Load TV genre map once
+    const tvGenreJson = await tmdbFetch("/genre/tv/list", TMDB_API_KEY);
+    const tvGenreMap = new Map<number, string>();
+    for (const g of (tvGenreJson?.genres ?? [])) {
+      tvGenreMap.set(g.id, g.name);
+    }
 
-    // Fetch reviews that are not linked to a series yet
+    // Load movie genre map once
+    const movieGenreJson = await tmdbFetch("/genre/movie/list", TMDB_API_KEY);
+    const movieGenreMap = new Map<number, string>();
+    for (const g of (movieGenreJson?.genres ?? [])) {
+      movieGenreMap.set(g.id, g.name);
+    }
+
     const { data: reviews, error: reviewsErr } = await supabase
       .from("reviews")
       .select("id, review_title, title_as_printed, guardian_url, guardian_stars, publication_date, series_id")
@@ -122,47 +187,96 @@ serve(async (req) => {
     let skippedNoTitle = 0;
     let skippedNoTmdb = 0;
 
+    const unmatchedSample: Array<{
+      review_id: number;
+      rawTitle: string;
+      candidates: string[];
+    }> = [];
+
     for (const r of reviews ?? []) {
       processed++;
 
       const rawTitle = (r.title_as_printed ?? r.review_title ?? "").toString().trim();
-      const candidate = cleanSeriesTitle(rawTitle);
-
-      if (!candidate) {
+      if (!rawTitle) {
         skippedNoTitle++;
         continue;
       }
 
-      const tv = await tmdbSearchTV(candidate, TMDB_API_KEY);
-      if (!tv?.id) {
+      const cleanedTitle = cleanTitle(rawTitle);
+      const candidates = buildCandidates(cleanedTitle);
+
+      let matchedKind: "tv" | "movie" | null = null;
+      let matched: TMDbTV | TMDbMovie | null = null;
+
+      for (const candidate of candidates) {
+        const tv = await tmdbSearchTV(candidate, TMDB_API_KEY);
+        if (tv) {
+          matched = tv;
+          matchedKind = "tv";
+          break;
+        }
+
+        const movie = await tmdbSearchMovie(candidate, TMDB_API_KEY);
+        if (movie) {
+          matched = movie;
+          matchedKind = "movie";
+          break;
+        }
+      }
+
+      if (!matched || !matchedKind) {
         skippedNoTmdb++;
+        if (unmatchedSample.length < 20) {
+          unmatchedSample.push({
+            review_id: r.id,
+            rawTitle,
+            candidates,
+          });
+        }
         continue;
       }
 
       tmdbMatched++;
 
-      const genres = (tv.genre_ids ?? [])
+      const genreMap = matchedKind === "tv" ? tvGenreMap : movieGenreMap;
+
+      const genres = (matched.genre_ids ?? [])
         .map((id) => genreMap.get(id))
         .filter(Boolean)
         .join(", ") || null;
 
-      const firstAirYear = tv.first_air_date ? Number(tv.first_air_date.slice(0, 4)) : null;
-      const country = tv.origin_country?.length ? tv.origin_country.join(", ") : null;
+      const firstAirYear =
+        matchedKind === "tv"
+          ? (matched as TMDbTV).first_air_date
+            ? Number((matched as TMDbTV).first_air_date!.slice(0, 4))
+            : null
+          : (matched as TMDbMovie).release_date
+            ? Number((matched as TMDbMovie).release_date!.slice(0, 4))
+            : null;
+
+      const country =
+        matchedKind === "tv"
+          ? (matched as TMDbTV).origin_country?.length
+            ? (matched as TMDbTV).origin_country!.join(", ")
+            : null
+          : null;
+
+      const displayName =
+        matchedKind === "tv"
+          ? (matched as TMDbTV).name ?? (matched as TMDbTV).original_name ?? cleanedTitle
+          : (matched as TMDbMovie).title ?? (matched as TMDbMovie).original_title ?? cleanedTitle;
 
       const seriesPayload = {
-        // You already created these columns in series
-        tmdb_id: String(tv.id),
-        original_title: candidate,
-        name: tv.name ?? tv.original_name ?? candidate,
+        tmdb_id: `${matchedKind}:${matched.id}`,
+        original_title: cleanedTitle,
+        name: displayName,
         first_air_year: firstAirYear,
         country,
         genres,
-        overview: tv.overview ?? null,
-        poster_url: posterUrlFromPath(tv.poster_path),
+        overview: matched.overview ?? null,
+        poster_url: posterUrlFromPath(matched.poster_path),
       };
 
-      // Upsert series row by tmdb_id
-      // IMPORTANT: This works best if series.tmdb_id has a UNIQUE constraint.
       const { data: upserted, error: upsertErr } = await supabase
         .from("series")
         .upsert(seriesPayload, { onConflict: "tmdb_id" })
@@ -184,7 +298,6 @@ serve(async (req) => {
 
       seriesUpserted++;
 
-      // Link the review to the series
       const { error: linkErr } = await supabase
         .from("reviews")
         .update({ series_id: upserted.id })
@@ -211,6 +324,7 @@ serve(async (req) => {
         reviewsLinked,
         skippedNoTitle,
         skippedNoTmdb,
+        unmatchedSample,
       }),
       { status: 200, headers: { "Content-Type": "application/json" } },
     );

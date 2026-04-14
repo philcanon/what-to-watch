@@ -85,6 +85,11 @@ export default function SeriesGrid({
         const posterUrl = item.poster_url || null
         const providers = providerNames(item.watch_providers_au)
         const isFavorite = favorites.includes(item.id)
+        const isMustSee = item.is_must_see === true
+
+        const hasGuardianRating = item.guardian_avg_stars != null
+        const hasUserRating = item.user_avg_rating != null && Number(item.user_rating_count || 0) > 0
+        const hasWatchInfo = providers.length > 0
 
         return (
           <div
@@ -113,6 +118,26 @@ export default function SeriesGrid({
               border: '1px solid rgba(0,0,0,0.05)',
             }}
           >
+            {isMustSee && !compact && (
+              <div
+                style={{
+                  position: 'absolute',
+                  bottom: '10px',
+                  left: '10px',
+                  zIndex: 2,
+                  background: 'rgba(17,24,39,0.92)',
+                  color: '#fff',
+                  fontSize: '0.72rem',
+                  fontWeight: 700,
+                  padding: '6px 10px',
+                  borderRadius: '999px',
+                  letterSpacing: '0.01em',
+                }}
+              >
+                Must See
+              </div>
+            )}
+
             {onToggleFavorite && (
               <button
                 onClick={(e) => {
@@ -199,7 +224,7 @@ export default function SeriesGrid({
 
               <p
                 style={{
-                  margin: '0 0 8px 0',
+                  margin: isMustSee && !compact && !hasGuardianRating && !hasUserRating && !hasWatchInfo ? 0 : '0 0 8px 0',
                   fontSize: compact ? '0.78rem' : '0.86rem',
                   color: '#6b7280',
                 }}
@@ -209,39 +234,45 @@ export default function SeriesGrid({
 
               {!compact && (
                 <>
-                  <p
-                    style={{
-                      margin: '0 0 6px 0',
-                      fontSize: '0.83rem',
-                      color: '#374151',
-                      lineHeight: 1.35,
-                    }}
-                  >
-                    <strong>Guardian:</strong> {starsFromAvg(item.guardian_avg_stars)}
-                  </p>
+                  {hasGuardianRating && (
+                    <p
+                      style={{
+                        margin: '0 0 6px 0',
+                        fontSize: '0.83rem',
+                        color: '#374151',
+                        lineHeight: 1.35,
+                      }}
+                    >
+                      <strong>Guardian:</strong> {starsFromAvg(item.guardian_avg_stars)}
+                    </p>
+                  )}
 
-                  <p
-                    style={{
-                      margin: '0 0 6px 0',
-                      fontSize: '0.83rem',
-                      color: '#374151',
-                      lineHeight: 1.35,
-                    }}
-                  >
-                    <strong>Users:</strong> {userRatingText(item.user_avg_rating, item.user_rating_count)}
-                  </p>
+                  {hasUserRating && (
+                    <p
+                      style={{
+                        margin: '0 0 6px 0',
+                        fontSize: '0.83rem',
+                        color: '#374151',
+                        lineHeight: 1.35,
+                      }}
+                    >
+                      <strong>Users:</strong> {userRatingText(item.user_avg_rating, item.user_rating_count)}
+                    </p>
+                  )}
 
-                  <p
-                    style={{
-                      margin: '0 0 8px 0',
-                      fontSize: '0.83rem',
-                      color: '#374151',
-                      lineHeight: 1.35,
-                    }}
-                  >
-                    <strong>Watch:</strong>{' '}
-                    {providers.length > 0 ? providers.join(', ') : 'Not listed'}
-                  </p>
+                  {hasWatchInfo && (
+                    <p
+                      style={{
+                        margin: '0 0 8px 0',
+                        fontSize: '0.83rem',
+                        color: '#374151',
+                        lineHeight: 1.35,
+                      }}
+                    >
+                      <strong>Watch:</strong>{' '}
+                      {providers.join(', ')}
+                    </p>
+                  )}
 
                   {item.latest_guardian_url && (
                     <p
@@ -253,31 +284,31 @@ export default function SeriesGrid({
                       onClick={(e) => e.stopPropagation()}
                     >
                       <a
-  href={item.latest_guardian_url}
-  target="_blank"
-  rel="noreferrer"
-  onClick={(e) => e.stopPropagation()}
-  style={{
-    display: 'inline-block',
-    padding: '6px 10px',
-    borderRadius: '999px',
-    fontSize: '0.75rem',
-    fontWeight: 600,
-    color: '#333',
-    background: '#f3f4f6',
-    border: '1px solid #e5e7eb',
-    textDecoration: 'none',
-    transition: 'all 0.15s ease',
-  }}
-  onMouseEnter={(e) => {
-    e.currentTarget.style.background = '#e5e7eb'
-  }}
-  onMouseLeave={(e) => {
-    e.currentTarget.style.background = '#f3f4f6'
-  }}
->
-  Read Guardian review
-</a>
+                        href={item.latest_guardian_url}
+                        target="_blank"
+                        rel="noreferrer"
+                        onClick={(e) => e.stopPropagation()}
+                        style={{
+                          display: 'inline-block',
+                          padding: '6px 10px',
+                          borderRadius: '999px',
+                          fontSize: '0.75rem',
+                          fontWeight: 600,
+                          color: '#333',
+                          background: '#f3f4f6',
+                          border: '1px solid #e5e7eb',
+                          textDecoration: 'none',
+                          transition: 'all 0.15s ease',
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.background = '#e5e7eb'
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.background = '#f3f4f6'
+                        }}
+                      >
+                        Read review
+                      </a>
                     </p>
                   )}
                 </>

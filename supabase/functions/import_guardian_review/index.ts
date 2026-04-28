@@ -76,7 +76,7 @@ serve(async (req) => {
         const starsRaw = r?.fields?.starRating;
         const stars = starsRaw ? Number(starsRaw) : null;
 
-        if (!stars || stars < 4) {
+        if (!stars || stars < 3) {
           skippedLowStars++;
           continue;
         }
